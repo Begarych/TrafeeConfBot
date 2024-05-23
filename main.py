@@ -1,11 +1,8 @@
-import asyncio
-
 import telebot.types
 # import telebot.types
 from telebot import TeleBot
 from telebot.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton,
                            ReplyKeyboardRemove)
-from telebot.async_telebot import AsyncTeleBot
 from utils import Registry
 from config import TOKEN, allowed_user_ids
 from time import sleep
