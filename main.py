@@ -1,5 +1,4 @@
 import telebot.types
-# import telebot.types
 from telebot import TeleBot
 from telebot.types import (ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton,
                            ReplyKeyboardRemove)
@@ -7,7 +6,6 @@ from utils import Registry
 from config import TOKEN, allowed_user_ids
 from time import sleep
 
-# bot = AsyncTeleBot(TOKEN)
 bot = TeleBot(TOKEN)
 session = Registry()
 
@@ -22,6 +20,11 @@ def start(message: telebot.types.Message):
                                                  f'поможет тебе с регистрацией на конкурс. Чтобы начать, жми кнопку '
                                                  f'"Продолжить" ниже ⬇️',
                                                  reply_markup=markup)
+
+    if message.text == "Продолжить":
+        session.message_status[message.chat.id] = "waiting"
+    else:
+        session.message_status[message.chat.id] = "error"
 
 
 @bot.message_handler(commands=['broadcast'])
@@ -47,10 +50,19 @@ def distribution(message: telebot.types.Message):
     session.broadcast_status = False
 
 
+@bot.message_handler(func=lambda message: session.message_status[message.chat.id] == "error")
+def useless(message: telebot.types.Message):
+    if message.text == "Продолжить":
+        session.message_status[message.chat.id] = "waiting"
+        instruction(message)
+    else:
+        bot.send_message(message.chat.id, text="Используйте кнопки снизу, пожалуйста")
+
+
 @bot.message_handler(func=lambda message: message.text == "Продолжить")
 def instruction(message: telebot.types.Message):
     bot.send_message(message.chat.id, text="📨 Введите ваш адрес электронной почты\n\n Пример: example@example.com",
-                           reply_markup=ReplyKeyboardRemove())
+                     reply_markup=ReplyKeyboardRemove())
     session.message_status[message.chat.id] = "waiting"
 
 
@@ -69,40 +81,50 @@ def try_again(message: telebot.types.Message):
     instruction(message)
 
 
-@bot.message_handler(func=lambda message: message.text == "Да" and not session.register_status)
+@bot.message_handler(func=lambda message: message.text == "Да")
 def confirmed(message: telebot.types.Message):
     session.write_to_xml(message.chat.first_name, str(session.user_id), session.user_mail)
     keyboard = InlineKeyboardMarkup()
     keyboard.add(InlineKeyboardButton(url="https://www.trafee.com/publisher/register", text="Ссылка"))
     session.register_status = True
     bot.send_message(message.chat.id, text=f"📩 Ваш адрес электронной почты успешно сохранен.",
-                           reply_markup=ReplyKeyboardRemove())
+                     reply_markup=ReplyKeyboardRemove())
     bot.send_message(message.chat.id, text=f"Чтобы завершить регистрацию, пожалуйста, перейдите по ссылке",
-                           reply_markup=keyboard)
+                     reply_markup=keyboard)
     sleep(10)
     bot.send_message(message.chat.id, text="Не забудьте проверить и подтвердить свой электронный адрес. Также, "
                                                  "приглашаем вас присоединиться к нашему Telegram-каналу 📲, где сейчас "
                                                  "идет топовый розыгрыш премиум-аккаунтов. Не пропустите!\n"
                                                  "https://t.me/trafeeRuChanel",
-                           reply_markup=ReplyKeyboardRemove())
+                     reply_markup=ReplyKeyboardRemove())
 
 
 @bot.message_handler(func=lambda message: session.register_status)
-async def already_register(message: telebot.types.Message):
+def already_register(message: telebot.types.Message):
     bot.send_message(message.chat.id, text="Вы уже были зарегистрированы\n"
                                                  "Не забудьте проверить и подтвердить свой электронный адрес. Также, "
                                                  "приглашаем вас присоединиться к нашему Telegram-каналу 📲, где сейчас "
                                                  "идет топовый розыгрыш премиум-аккаунтов. Не пропустите!\n"
                                                  "https://t.me/trafeeRuChanel"
-                           )
+                     )
 
 
 @bot.message_handler(func=lambda message: True)
 def useless(message: telebot.types.Message):
-    bot.send_message(message.chat.id, text="Используйте /start для старта бота")
-
-
-# asyncio.run(bot.polling(none_stop=True, skip_pending=True))
+    bot.send_message(message.chat.id, text="Используйте кнопки снизу, пожалуйста")
 
 
 bot.polling(none_stop=True, skip_pending=True)
+
+
+# def run_bot():
+#     while True:
+#         try:
+#             bot.polling(non_stop=True, skip_pending=True, timeout=20)
+#         except Exception as e:
+#             print(f"Error: {e}")
+#             sleep(10)
+
+
+# if __name__ == "__main__":
+#     run_bot()
